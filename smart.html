@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Dashboard - Grand Hotel</title>
+    <link rel="icon" type="image/x-icon" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Roboto&family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
@@ -300,7 +301,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.6);
-            z-index: 2000;
+            z-index: 2000; /* Changed from display: none to allow flex centering */
             display: none; /* Hidden by default */
         }
 
@@ -456,7 +457,7 @@
 
     <header>
         <h1>Smart Dashboard</h1>
-        <a href="index.html" class="home-btn"><i class="fas fa-home"></i> Return to Home Page</a>
+        <a href="homePage.html" class="home-btn"><i class="fas fa-home"></i> Return to Home Page</a>
     </header>
 
     <div class="dashboard-container">
@@ -570,22 +571,30 @@
         let initialSuggestionMarkers = [];
         let directionsControl = null;
 
+        // Get current visitor ID for namespacing localStorage
+        const visitorId = localStorage.getItem('visitorId') || '#guest';
+
         // --- START: Activity Logging for Admin Dashboard ---
         function logActivity(message, iconClass, type) {
             let activities = JSON.parse(localStorage.getItem('userActivities') || '[]');
             const newActivity = {
-                message: message,
+                message: `[${visitorId}] ${message}`, // Add visitor ID to message
                 icon: iconClass,
                 type: type, // e.g., 'alert', 'entry', 'info'
                 time: new Date().toISOString()
             };
             activities.unshift(newActivity); // Add to the beginning
             localStorage.setItem('userActivities', JSON.stringify(activities.slice(0, 10))); // Keep only the latest 10
+
+            // Log status for the admin panel
+            if (type === 'alert') {
+                localStorage.setItem(`${visitorId}_status`, 'Assistance Req.');
+            }
         }
         // Function to update the visited places count in localStorage
         function updateVisitedPlacesCount() {
             const currentPlaceCount = routePanel.querySelectorAll('.route-step').length;
-            localStorage.setItem('visitedPlacesCount', currentPlaceCount);
+            localStorage.setItem(`${visitorId}_visitedPlacesCount`, currentPlaceCount);
         }
 
         // Function to update the average crowd level in localStorage
@@ -596,7 +605,7 @@
             }
             const totalCrowdLevel = currentRoute.reduce((sum, place) => sum + place.crowdLevel, 0);
             const averageCrowdLevel = Math.round(totalCrowdLevel / currentRoute.length);
-            localStorage.setItem('averageCrowdLevel', averageCrowdLevel);
+            localStorage.setItem(`${visitorId}_averageCrowdLevel`, averageCrowdLevel);
         }
 
         
@@ -638,6 +647,7 @@
             stepEl.addEventListener('click', () => {
                 map.flyTo(step.coords, 15);
             });
+            localStorage.setItem(`${visitorId}_lastLocation`, step.title);
 
             // Add marker to map
             const marker = L.marker(step.coords).addTo(map)
@@ -1026,8 +1036,8 @@
             const badFeelingCategories = ['calming', 'de-stress', 'relaxing', 'rejuvenating', 'physical-needs'];
 
             if (categoryFound && badFeelingCategories.includes(categoryFound)) {
-                let currentBadFeelings = parseInt(localStorage.getItem('badFeelingsCount') || '0', 10);
-                localStorage.setItem('badFeelingsCount', currentBadFeelings + 1);
+                let currentBadFeelings = parseInt(localStorage.getItem(`${visitorId}_badFeelingsCount`) || '0', 10);
+                localStorage.setItem(`${visitorId}_badFeelingsCount`, currentBadFeelings + 1);
                 logActivity(`User reported feeling ${message}.`, 'fas fa-heart-broken', 'alert');
             }
 
@@ -1074,6 +1084,7 @@
 
         aiModalHeader.addEventListener('mousedown', (e) => {
             isDragging = true;
+            aiModalContent.style.position = 'absolute'; // Ensure position is absolute for dragging
             offsetX = e.clientX - aiModalContent.offsetLeft;
             offsetY = e.clientY - aiModalContent.offsetTop;
             
